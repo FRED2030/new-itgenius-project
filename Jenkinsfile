@@ -10,7 +10,7 @@ pipeline {
         stage('Git') {
             steps {
                 git branch: 'master',
-                url: 'https://github.com/ityourwayroby/itgenius-project.git'
+                url: 'https://github.com/FRED2030/new-itgenius-project.git'
             }
         }
 
@@ -27,9 +27,9 @@ pipeline {
                 sh """
                 chmod +x ./mvnw
                 ./mvnw clean install
-                docker rmi -f robystunna2/itgenius &>/dev/null && echo 'Removed old container'
-                docker build -t robystunna2/itgenius .
-                docker push robystunna2/itgenius
+                docker rmi -f fredking/itgenius &>/dev/null && echo 'Removed old container'
+                docker build -t fredking/itgenius .
+                docker push fredking/itgenius
                 """
                 
                 }
