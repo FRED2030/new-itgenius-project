@@ -2,9 +2,9 @@ pipeline {
     agent any
 
     environment {
-        SSH_USER = 'ec2-user'  // Update based on your EC2 setup
+        SSH_USER = 'main'  // Update based on your EC2 setup
         EC2_INSTANCE_IP = '54.90.170.47'  // Replace with your EC2 instance's public IP or DNS
-        SSH_KEY = credentials('my-ec2-ssh-key')  // Jenkins credential ID for SSH key
+        SSH_KEY = credentials('main-key')  // Jenkins credential ID for SSH key
     }
 
     stages {
