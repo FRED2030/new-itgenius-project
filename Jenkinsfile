@@ -2,62 +2,52 @@ pipeline {
     agent any
 
     environment {
-        REGISTRY_CREDENTIAL = "dockerhub"
+        JAVA_HOME = tool 'JDK 11' // Update with your JDK installation name
+        MAVEN_HOME = tool 'Maven 3.6.3' // Update with your Maven installation name
     }
 
     stages {
-
-        stage('Git') {
+        stage('Checkout') {
             steps {
-                git branch: 'master',
-                url: 'https://github.com/FRED2030/new-itgenius-project.git'
+                // Checkout the code from the Git repository
+                git url: 'https://github.com/FRED2030/new-itgenius-project.git', branch: 'main' // Update with your repo URL and branch
             }
         }
 
-        stage('Test'){
-            steps{
-                echo 'test'
+        stage('Build') {
+            steps {
+                // Clean and package the application
+                sh "'${MAVEN_HOME}/bin/mvn' clean package"
             }
         }
 
-        stage('Docker build and push'){
-            steps{
-                script {
-                    docker.withRegistry('', REGISTRY_CREDENTIAL) {
-                sh """
-                chmod +x ./mvnw
-                ./mvnw clean install
-                docker rmi -f fredking/itgenius &>/dev/null && echo 'Removed old container'
-                docker build -t fredking/itgenius .
-                docker push fredking/itgenius
-                """
-                
-                }
+        stage('Test') {
+            steps {
+                // Run tests
+                sh "'${MAVEN_HOME}/bin/mvn' test"
             }
         }
-        }
 
-
-/*
-        stage('Deploy to server'){
-            steps{
-                sshPublisher(publishers: [sshPublisherDesc(configName: 'test-server',
-                transfers: [sshTransfer(cleanRemote: false, excludes: '',
-                execCommand: '''cd /home/ec2-user/
-                sh deployment.sh''',
-                execTimeout: 120000,
-                flatten: false,
-                makeEmptyDirs: false,
-                noDefaultExcludes: false,
-                patternSeparator: '[, ]+',
-                remoteDirectory: '',
-                remoteDirectorySDF: false,
-                removePrefix: '',
-                sourceFiles: '')],
-                usePromotionTimestamp: false,
-                useWorkspaceInPromotion: false,
-                verbose: false)])
+        stage('Deploy') {
+            steps {
+                // Deploy the application (modify this step based on your deployment strategy)
+                echo 'Deploying to server...'
+                // Example of using SCP or any deployment command
+                // sh "scp target/itgenuine-0.0.1-SNAPSHOT.jar user@yourserver:/path/to/deploy/"
             }
-        } */
+        }
+    }
+
+    post {
+        always {
+            // Archive the artifacts for later access
+            archiveArtifacts artifacts: 'target/*.jar', allowEmptyArchive: true
+        }
+        success {
+            echo 'Pipeline succeeded!'
+        }
+        failure {
+            echo 'Pipeline failed.'
+        }
     }
 }
