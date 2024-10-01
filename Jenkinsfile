@@ -2,62 +2,51 @@ pipeline {
     agent any
 
     environment {
-        REGISTRY_CREDENTIAL = "dockerhub"
+        SSH_USER = 'ec2-user'  // Update based on your EC2 setup
+        EC2_INSTANCE_IP = '54.90.170.47'  // Replace with your EC2 instance's public IP or DNS
+        SSH_KEY = credentials('my-ec2-ssh-key')  // Jenkins credential ID for SSH key
     }
 
     stages {
-
-        stage('Git') {
+        stage('Clone Repository') {
             steps {
-                git branch: 'main',
-                url: 'https://github.com/FRED2030/new-itgenius-project.git'
+                // Clone your Git repository
+                git url: 'https://github.com/FRED2030/new-itgenius-project.git', branch: 'main'
             }
         }
 
-        stage('Test'){
-            steps{
-                echo 'test'
-            }
-        }
-
-        stage('Docker build and push'){
-            steps{
-                script {
-                    docker.withRegistry('', REGISTRY_CREDENTIAL) {
+        stage('Transfer docker-compose.yml to EC2') {
+            steps {
+                // Copy docker-compose.yml to EC2
                 sh """
-                chmod +x ./mvnw
-                ./mvnw clean install
-                docker rmi -f fredking/itgenius &>/dev/null && echo 'Removed old container'
-                docker build -t fredking/itgenius .
-                docker push fredking/itgenius
+                    scp -i ${SSH_KEY} -o StrictHostKeyChecking=no docker-compose.yml ${SSH_USER}@${EC2_INSTANCE_IP}:/home/${SSH_USER}/docker-compose.yml
                 """
-                
+            }
+        }
+
+        stage('Deploy with Docker Compose on EC2') {
+            steps {
+                // SSH into EC2 and deploy using docker-compose
+                script {
+                    sh """
+                        ssh -i ${SSH_KEY} -o StrictHostKeyChecking=no ${SSH_USER}@${EC2_INSTANCE_IP} '
+                        cd /home/${SSH_USER}
+                        docker-compose down
+                        docker-compose pull
+                        docker-compose up -d
+                        '
+                    """
                 }
             }
         }
+    }
+
+    post {
+        success {
+            echo 'Deployment completed successfully!'
         }
-
-
-/*
-        stage('Deploy to server'){
-            steps{
-                sshPublisher(publishers: [sshPublisherDesc(configName: 'test-server',
-                transfers: [sshTransfer(cleanRemote: false, excludes: '',
-                execCommand: '''cd /home/ec2-user/
-                sh deployment.sh''',
-                execTimeout: 120000,
-                flatten: false,
-                makeEmptyDirs: false,
-                noDefaultExcludes: false,
-                patternSeparator: '[, ]+',
-                remoteDirectory: '',
-                remoteDirectorySDF: false,
-                removePrefix: '',
-                sourceFiles: '')],
-                usePromotionTimestamp: false,
-                useWorkspaceInPromotion: false,
-                verbose: false)])
-            }
-        } */
+        failure {
+            echo 'Deployment failed!'
+        }
     }
 }
